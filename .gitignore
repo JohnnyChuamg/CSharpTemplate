@@ -1,0 +1,29 @@
+.git
+.idea
+.DS_Store
+
+# User-specific files
+*.suo
+*.user
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+[Bb]in/
+[Oo]bj/
+
+# MsTest test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+publish/
+
+# ReSharper is a .NET coding add-in
+_Resharp*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+sql/
+log/

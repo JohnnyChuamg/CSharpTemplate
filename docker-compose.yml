@@ -1,0 +1,6 @@
+﻿services:
+  worklog:
+    image: worklog
+    build:
+      context: .
+      dockerfile: WorkLog/Dockerfile

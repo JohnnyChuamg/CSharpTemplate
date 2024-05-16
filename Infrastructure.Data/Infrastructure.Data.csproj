@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+    </ItemGroup>
+    
+    <ItemGroup>
+      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.4" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.4" />
+      <PackageReference Include="System.Linq.Expressions" Version="4.3.0" />
+    </ItemGroup>
+    
+    <ItemGroup>
+      <Folder Include="Repositories\EntityFramework\Interceptors\" />
+    </ItemGroup>
+
+
+
+</Project>
