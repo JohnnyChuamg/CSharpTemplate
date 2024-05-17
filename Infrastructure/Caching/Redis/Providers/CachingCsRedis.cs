@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using CSRedis;
 using Microsoft.Extensions.Logging;
 
+using CSRedis;
 namespace Infrastructure.Caching.Redis.Providers;
 
 public class CachingCsRedis : IRedis
@@ -11,7 +11,7 @@ public class CachingCsRedis : IRedis
 
     private readonly RedisOptions _options;
     private readonly ILogger _logger;
-    
+
     public string Instance => _options.Instance;
 
     public CachingCsRedis(RedisOptions options)
@@ -51,8 +51,10 @@ public class CachingCsRedis : IRedis
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
-        ArgumentException.ThrowIfNullOrWhiteSpace(nameof(value));
+        if (string.IsNullOrWhiteSpace(key))
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        if (value.Length == 0)
+            ArgumentException.ThrowIfNullOrEmpty(nameof(value));
         key = GetKeys(key)[0];
         var expireSeconds = options is not { AbsoluteExpiration: not null }
             ? -1
@@ -64,32 +66,43 @@ public class CachingCsRedis : IRedis
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
-        ArgumentNullException.ThrowIfNull(value);
+        if (string.IsNullOrWhiteSpace(key))
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        if (value.Length == 0)
+            ArgumentException.ThrowIfNullOrEmpty(nameof(value));
         key = GetKeys(key)[0];
         var result = await RedisHelper<RedisHelper>.SetNxAsync(key, value);
         if (option?.AbsoluteExpiration.HasValue ?? false)
         {
-            await ExpireAsync(key, (int)option.AbsoluteExpiration.Value.Subtract(DateTimeOffset.UtcNow).TotalSeconds, cancellationToken);
+            await RedisHelper<RedisHelper>.ExpireAsync(key,
+                (int)option.AbsoluteExpiration.Value.Subtract(DateTimeOffset.UtcNow).TotalSeconds);
         }
+
         return result;
     }
 
-    public Task<bool> SetAsync(KeyValuePair<string, byte[]>[] keyValuePairs, CancellationToken cancellationToken = default)
+    public Task<bool> MSetAsync(KeyValuePair<string, byte[]>[] keyValuePairs,
+        CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        ArgumentException.ThrowIfNullOrEmpty(nameof(keyValuePairs));
-        return RedisHelper<RedisHelper>.MSetAsync(keyValuePairs);
+        if (keyValuePairs.Length == 0)
+            ArgumentException.ThrowIfNullOrEmpty(nameof(keyValuePairs));
+        var data = (from keyValuePair in keyValuePairs
+            let key = GetKeys(keyValuePair.Key)[0]
+            let value = keyValuePair.Value
+            select new KeyValuePair<string, byte[]>(key, value)).ToArray();
+        return RedisHelper<RedisHelper>.MSetAsync(data);
     }
-    
+
     public async Task<IEnumerable<byte[]>> GetAsync(string[] keys, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        ArgumentException.ThrowIfNullOrEmpty(nameof(keys));
+        if (keys.Length == 0)
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(keys));
 
         keys = GetKeys(keys);
         List<byte[]> result = [];
-        
+
         await foreach (var item in MGetAsync(keys, _options.MultiGetBatchSize).WithCancellation(cancellationToken))
         {
             if (item != null)
@@ -101,17 +114,19 @@ public class CachingCsRedis : IRedis
         return result;
     }
 
-    public async Task<IEnumerable<byte[]>> GetAsync(string key, CancellationToken cancellationToken = default)
+    public Task<IEnumerable<byte[]>> GetAsync(string key, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
-        return await GetAsync([key], cancellationToken);
+        if (string.IsNullOrWhiteSpace(key))
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        return GetAsync([key], cancellationToken);
     }
 
     public async Task<long> DelAsync(string key, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        if (string.IsNullOrWhiteSpace(key))
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
         var keys = GetKeys(key);
         var result = 0L;
         if (keys.Length == 0)
@@ -132,225 +147,684 @@ public class CachingCsRedis : IRedis
                     .Take(_options.MultiGetBatchSize)
                     .ToArray());
         }
-        
+
         return result;
     }
 
     public Task<long> IncrByAsync(string key, long value, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        if (value == 0L)
+        {
+            throw new ArgumentNullException(nameof(value));
+        }
+
+        key = GetKeys(key)[0];
+        return RedisHelper<RedisHelper>.IncrByAsync(key, value);
     }
 
     public Task<long> RPushAsync(string key, byte[] value, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        if (value.Length == 0)
+            ArgumentException.ThrowIfNullOrEmpty(nameof(value));
+        key = GetKeys(key)[0];
+        return RedisHelper<RedisHelper>.RPushAsync(key, value);
     }
 
     public Task<byte[]> RPopAsync(string key, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        key = GetKeys(key)[0];
+        return RedisHelper<RedisHelper>.RPopAsync<byte[]>(key);
     }
 
     public Task<long> LPushAsync(string key, byte[] value, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        if (value.Length == 0)
+            ArgumentException.ThrowIfNullOrEmpty(nameof(value));
+        key = GetKeys(key)[0];
+        return RedisHelper<RedisHelper>.LPushAsync(key, value);
     }
 
     public Task<byte[]> LPopAsync(string key, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        key = GetKeys(key)[0];
+        return RedisHelper<RedisHelper>.LPopAsync<byte[]>(key);
     }
 
-    public Task<IEnumerable<byte[]>> LRangeAsync(string key, long start, long stop,
+    public async Task<IEnumerable<byte[]>> LRangeAsync(string key, long start, long stop,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        if (stop == 0L)
+        {
+            throw new ArgumentNullException(nameof(stop));
+        }
+
+        if (stop == start)
+        {
+            throw new ArgumentException("stop == start", nameof(stop));
+        }
+
+        key = GetKeys(key)[0];
+
+        return await RedisHelper<RedisHelper>.LRangeAsync<byte[]>(key, start, stop);
     }
 
     public Task<byte[]> LIndexAsync(string key, long index, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        key = GetKeys(key)[0];
+        return RedisHelper<RedisHelper>.LIndexAsync<byte[]>(key, index);
     }
 
     public Task<bool> LTrimAsync(string key, long start, long stop, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        if (stop == 0L)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(nameof(stop));
+        }
+
+        if (stop == start)
+        {
+            throw new ArgumentException("stop == start", nameof(stop));
+        }
+
+        return RedisHelper<RedisHelper>.LTrimAsync(key, start, stop);
     }
 
     public Task<long> LRemAsync(string key, byte[] value, long count, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        if (value.Length == 0)
+            ArgumentException.ThrowIfNullOrEmpty(nameof(value));
+        return RedisHelper<RedisHelper>.LRemAsync(key, count, value);
     }
 
     public Task<byte[]> RPopLPushAsync(string source, string destination, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(source))
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(source));
+        if (string.IsNullOrWhiteSpace(destination))
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(destination));
+        source = GetKeys(source)[0];
+        destination = GetKeys(source)[0];
+        return RedisHelper<RedisHelper>.RPopLPushAsync<byte[]>(source, destination);
     }
 
     public Task<long> SAddAsync(string key, byte[] member, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        if (member.Length == 0)
+            ArgumentException.ThrowIfNullOrEmpty(nameof(member));
+        key = GetKeys(key)[0];
+        return RedisHelper<RedisHelper>.SAddAsync(key, member);
     }
 
     public Task<long> SAddAsync(string key, byte[][] members, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+
+        if (members.Length == 0)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(nameof(members));
+        }
+
+        key = GetKeys(key)[0];
+        return RedisHelper<RedisHelper>.SAddAsync(key, members);
     }
 
-    public Task<IEnumerable<byte[]>> SMembersAsync(string key, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<byte[]>> SMembersAsync(string key, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        }
+
+        key = GetKeys(key)[0];
+        return await RedisHelper<RedisHelper>.SMembersAsync<byte[]>(key);
     }
 
     public Task<bool> SIsMemberAsync(string key, byte[] member, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+
+        if (member.Length == 0)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(nameof(member));
+        }
+
+        key = GetKeys(key)[0];
+        return RedisHelper<RedisHelper>.SIsMemberAsync(key, member);
     }
 
     public Task<long> SRemAsync(string key, byte[] member, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+
+        if (member.Length == 0)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(nameof(member));
+        }
+
+        key = GetKeys(key)[0];
+        return RedisHelper<RedisHelper>.SRemAsync(key, member);
     }
 
     public Task<long> SRemAsync(string key, byte[][] members, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+
+        if (members.Length == 0)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(nameof(members));
+        }
+
+        key = GetKeys(key)[0];
+        return RedisHelper<RedisHelper>.SRemAsync(key, members);
     }
 
-    public Task<IEnumerable<byte[]>> SDiffAsync(string[] keys, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<byte[]>> SDiffAsync(string[] keys, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (keys.Length == 0)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(nameof(keys));
+        }
+
+        keys = GetKeys(keys);
+        return await RedisHelper<RedisHelper>.SDiffAsync<byte[]>(keys);
     }
 
-    public Task<IEnumerable<byte[]>> SInterAsync(string[] keys, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<byte[]>> SInterAsync(string[] keys, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (keys.Length == 0)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(nameof(keys));
+        }
+
+        keys = GetKeys(keys);
+        return await RedisHelper<RedisHelper>.SInterAsync<byte[]>(keys);
     }
 
-    public Task<IEnumerable<byte[]>> SUnionAsync(string[] keys, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<byte[]>> SUnionAsync(string[] keys, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (keys.Length == 0)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(nameof(keys));
+        }
+
+        keys = GetKeys(keys);
+        return await RedisHelper<RedisHelper>.SUnionAsync<byte[]>(keys);
     }
 
     public Task<bool> HSetAsync(string key, string field, byte[] value, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+
+        if (string.IsNullOrWhiteSpace(field))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(field));
+        }
+
+        if (value.Length == 0)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(nameof(value));
+        }
+
+        key = GetKeys(key)[0];
+
+        return RedisHelper<RedisHelper>.HSetAsync(key, field, value);
     }
 
     public Task<byte[]> HGetAsync(string key, string field, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+
+        if (string.IsNullOrWhiteSpace(field))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(field));
+        }
+
+        key = GetKeys(key)[0];
+        return RedisHelper<RedisHelper>.HGetAsync<byte[]>(key, field);
     }
 
     public Task<Dictionary<string, byte[]>> HGetAllAsync(string key, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+        else
+        {
+            key = GetKeys(key)[0];
+        }
+
+        return RedisHelper<RedisHelper>.HGetAllAsync<byte[]>(key);
     }
 
     public Task<string[]> HKeysAsync(string key, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+        else
+        {
+            key = GetKeys(key)[0];
+        }
+
+        return RedisHelper<RedisHelper>.HKeysAsync(key);
     }
 
     public Task<long> HIncrByAsync(string key, string field, long value = 1,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+        else
+        {
+            key = GetKeys(key)[0];
+        }
+
+        if (string.IsNullOrWhiteSpace(field))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(field));
+        }
+
+        return RedisHelper<RedisHelper>.HIncrByAsync(key, field, value);
     }
 
     public Task<bool> HExistsAsync(string key, string field, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+        else
+        {
+            key = GetKeys(key)[0];
+        }
+
+        if (string.IsNullOrWhiteSpace(field))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(field));
+        }
+
+        return RedisHelper<RedisHelper>.HExistsAsync(key, field);
     }
 
     public Task<bool> HSetNxAsync(string key, string field, byte[] value, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+        else
+        {
+            key = GetKeys(key)[0];
+        }
+
+        if (string.IsNullOrWhiteSpace(field))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(field));
+        }
+
+        if (value.Length == 0)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(nameof(value));
+        }
+
+        return RedisHelper<RedisHelper>.HSetNxAsync(key, field, value);
     }
 
-    public Task<IEnumerable<byte[]>> HMGetAsync(string key, string[] fields,
+    public async Task<IEnumerable<byte[]>> HMGetAsync(string key, string[] fields,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+        else if (key.IndexOf('*', StringComparison.OrdinalIgnoreCase) > -1)
+        {
+            throw new ArgumentException("key does not support wildcard", nameof(key));
+        }
+        else
+        {
+            key = GetKeys(key)[0];
+        }
+
+        if (fields.Length == 0)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(nameof(fields));
+        }
+
+        return await RedisHelper<RedisHelper>.HMGetAsync<byte[]>(key, fields);
     }
 
     public Task<bool> HMSetAsync(string key, KeyValuePair<string, byte[]> keyValuePair,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+        else if (key.IndexOf('*', StringComparison.OrdinalIgnoreCase) > -1)
+        {
+            throw new ArgumentException("key does not support wildcard", nameof(key));
+        }
+        else
+        {
+            key = GetKeys(key)[0];
+        }
+
+        return RedisHelper<RedisHelper>.HMSetAsync(key, keyValuePair);
     }
 
-    public Task<bool> HDelAsync(string key, string field, CancellationToken cancellationToken = default)
+    public Task<long> HDelAsync(string key, string field, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+        else if (key.IndexOf('*', StringComparison.OrdinalIgnoreCase) > -1)
+        {
+            throw new ArgumentException("key does not support wildcard", nameof(key));
+        }
+        else
+        {
+            key = GetKeys(key)[0];
+        }
+
+        if (string.IsNullOrWhiteSpace(field))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(field));
+        }
+
+        return RedisHelper<RedisHelper>.HDelAsync(key, field);
     }
 
     public Task<long> HDelAsync(string key, string[] fields, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+        else if (key.IndexOf('*', StringComparison.OrdinalIgnoreCase) > -1)
+        {
+            throw new ArgumentException("key does not support wildcard", nameof(key));
+        }
+        else
+        {
+            key = GetKeys(key)[0];
+        }
+
+        if (fields.Length == 0)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(nameof(fields));
+        }
+
+        return RedisHelper<RedisHelper>.HDelAsync(key, fields);
     }
 
     public Task<long> HIncrAsync(string key, string field, long value = 1,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+        else if (key.IndexOf('*', StringComparison.OrdinalIgnoreCase) > -1)
+        {
+            throw new ArgumentException("key does not support wildcard", nameof(key));
+        }
+        else
+        {
+            key = GetKeys(key)[0];
+        }
+
+        if (string.IsNullOrWhiteSpace(field))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(field));
+        }
+
+        return RedisHelper<RedisHelper>.HIncrByAsync(key, field, value);
     }
 
     public Task<bool> ExpireAsync(string key, TimeSpan expire, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+        else
+        {
+            key = GetKeys(key)[0];
+        }
+
+        return RedisHelper<RedisHelper>.ExpireAsync(key, expire);
     }
 
     public Task<bool> ExpireAsync(string key, int seconds, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+        else
+        {
+            key = GetKeys(key)[0];
+        }
+
+        return RedisHelper<RedisHelper>.ExpireAsync(key, seconds);
     }
 
-    public Task SubscribeAsync(string topic, Action<string, byte[]> callback,
+    public async Task SubscribeAsync(string topic, Action<string, byte[]> callback,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(topic))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(topic));
+        }
+
+        topic = GetKeys(topic)[0];
+
+        var result = await Task.FromResult(RedisHelper<RedisHelper>.Subscribe((topic,
+            delegate(CSRedisClient.SubscribeMessageEventArgs args)
+            {
+                callback(args.Channel, Convert.FromBase64String(args.Body));
+            })));
+
+        Subscribes.AddOrUpdate(topic, result, delegate(string key, CSRedisClient.SubscribeObject value)
+        {
+            if (value != result)
+            {
+                _logger.LogWarning("Duplicate topic are not allowed: " + topic);
+            }
+
+            return value;
+        });
     }
 
-    public Task UnsubscribeAsync(string topic, CancellationToken cancellationToken = default)
+    public async Task UnsubscribeAsync(string topic, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(topic))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(topic));
+        }
+
+        topic = GetKeys(topic)[0];
+        Subscribes.TryRemove(topic, out var result);
+        if (result is { IsUnsubscribed: false })
+        {
+            await Task.Run(delegate { result.Unsubscribe(); }, cancellationToken);
+        }
     }
 
     public Task<long> PublishAsync(string topic, byte[] message, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(topic))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(topic));
+        }
+
+        if (message.Length == 0)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(nameof(message));
+        }
+
+        topic = GetKeys(topic)[0];
+
+        return RedisHelper<RedisHelper>.PublishAsync(topic,
+            Convert.ToBase64String(message, Base64FormattingOptions.None));
     }
 
     public Task<string[]> KeysAsync(string pattern, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(pattern))
+        {
+            ArgumentException.ThrowIfNullOrEmpty(nameof(pattern));
+        }
+
+        return Task.FromResult(GetKeys(pattern));
     }
 
-    public Task<string[]> ScanAsync(long cursor, string pattern, int? count,
+    public async Task<string[]> ScanAsync(long cursor, string pattern, int? count,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(pattern))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(pattern));
+        }
+        else
+        {
+            pattern = GetKeys(pattern)[0];
+        }
+
+        return (await RedisHelper<RedisHelper>.ScanAsync(cursor, pattern, count)).Items;
     }
 
     public Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+
+        key = GetKeys(key)[0];
+
+        return RedisHelper<RedisHelper>.ExistsAsync(key);
     }
 
     public Task<long> ExistsAsync(IEnumerable<string> keys, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var enumerable = keys.ToArray();
+        if (enumerable.Length == 0)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(nameof(keys));
+        }
+
+        enumerable = GetKeys(enumerable);
+        return RedisHelper<RedisHelper>.ExistsAsync(enumerable);
     }
 
     public Task<long> LLenAsync(string key, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(key));
+        }
+        else
+        {
+            key = GetKeys(key)[0];
+        }
+
+        return RedisHelper<RedisHelper>.LLenAsync(key);
     }
 
     private string[] GetKeys(params string[]? keys)
     {
-        ArgumentNullException.ThrowIfNull(keys);
+        if (keys == null || keys.Length == 0)
+        {
+            ArgumentNullException.ThrowIfNull(keys);
+        }
+
         try
         {
             var array = keys

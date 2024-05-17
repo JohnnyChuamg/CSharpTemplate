@@ -12,7 +12,7 @@ public interface IRedis : IHealthPing
     Task<bool> SetNxAsync(string key, byte[] value, CacheOption? option = null,
         CancellationToken cancellationToken = default);
 
-    Task<bool> SetAsync(KeyValuePair<string, byte[]>[] keyValuePairs, CancellationToken cancellationToken = default);
+    Task<bool> MSetAsync(KeyValuePair<string, byte[]>[] keyValuePairs, CancellationToken cancellationToken = default);
     
     Task<IEnumerable<byte[]>> GetAsync(string[] keys, CancellationToken cancellationToken = default);
 
@@ -78,7 +78,7 @@ public interface IRedis : IHealthPing
     Task<bool> HMSetAsync(string key, KeyValuePair<string, byte[]> keyValuePair,
         CancellationToken cancellationToken = default);
 
-    Task<bool> HDelAsync(string key, string field, CancellationToken cancellationToken = default);
+    Task<long> HDelAsync(string key, string field, CancellationToken cancellationToken = default);
 
     Task<long> HDelAsync(string key, string[] fields, CancellationToken cancellationToken = default);
 
