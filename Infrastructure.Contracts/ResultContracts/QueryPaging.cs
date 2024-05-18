@@ -1,6 +1,6 @@
 namespace Infrastructure.Contracts.ResultContracts;
 
-public class QueryPage
+public class QueryPaging
 {
     private int _offset;
     private int _limit = 30;

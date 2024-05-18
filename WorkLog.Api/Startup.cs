@@ -1,6 +1,7 @@
 using Infrastructure.Data.EntityFramework;
 using Infrastructure.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace WorkLog.Api;
 

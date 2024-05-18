@@ -2,6 +2,7 @@ namespace Infrastructure.Contracts.ResultContracts;
 
 public class Paging
 {
+    
     private const int DEFAULT_LIMIT = 30;
     private int _offset;
     private int _limit = DEFAULT_LIMIT;

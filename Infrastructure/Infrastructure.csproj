@@ -8,7 +8,14 @@
 
     <ItemGroup>
       <PackageReference Include="Caching.CSRedis" Version="3.8.800" />
+      <PackageReference Include="FluentValidation" Version="11.9.1" />
+      <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.2.0" />
+      <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.2.5" />
       <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Infrastructure.Contracts\Infrastructure.Contracts.csproj" />
     </ItemGroup>
 
 </Project>
