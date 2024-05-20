@@ -36,14 +36,14 @@ public class DbConfig
                     NodeType = NodeType.Master,
                     OptionsBuilder = new DbContextOptionsBuilder()
                         .UseLoggerFactory(MyLoggerFactory)
-                        .UseSqlServer(config.Connections.MsSqlDb["Master"].Connection)
+                        .UseSqlServer(config.Connections.RelationalDb["SqlServerMaster"].Connection)
                 },
                 new DbContextSetting
                 {
                     NodeType = NodeType.Slave,
                     OptionsBuilder = new DbContextOptionsBuilder()
                         .UseLoggerFactory(MyLoggerFactory)
-                        .UseSqlServer(config.Connections.MsSqlDb["Slave"].Connection)
+                        .UseSqlServer(config.Connections.RelationalDb["SqlServerSlave"].Connection)
                 }
             };
         });

@@ -1,0 +1,25 @@
+{
+  "Serilog": {
+    "Using": [
+      "Serilog.Sinks.File"
+    ],
+    "MinimumLevel": "Verbose",
+    "WriteTo": [
+      {
+        "Name": "File",
+        "Args": {
+          "Path": "./logs/log-api.log",
+          "formatter": "Serilog.Formatting.Json.JsonFormatter",
+          "rollingInterval": "Day",
+          "fileSizeLimitBytes": null,
+          "retainedFileCountLimit": null
+        }
+      }
+    ],
+    "Enrich": [
+      "FromLogContext",
+      "WithMachineName",
+      "WithThreadId"
+    ]
+  }
+}

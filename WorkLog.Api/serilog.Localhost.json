@@ -1,0 +1,25 @@
+{
+  "Serilog": {
+    "Using": [
+      "Serilog.Sinks.RollingFile",
+      "Serilog.Sinks.Literate"
+    ],
+    "MinimumLevel": "Verbose",
+    "WriteTo": [
+      {
+        "Name": "LiterateConsole"
+      },
+      {
+        "Name": "RollingFile",
+        "Args": {
+          "pathFormat": "./logs/log-{Date}-api.log"
+        }
+      }
+    ],
+    "Enrich": [
+      "FromLogContext",
+      "WithMachineName",
+      "WithThreadId"
+    ]
+  }
+}
