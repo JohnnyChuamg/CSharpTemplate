@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Formatters;
@@ -41,14 +42,14 @@ public class IgnoreJsonConvertResultFilterAttribute(
                     PropertyNamingPolicy = _jsonSerializerOptions.PropertyNamingPolicy,
                     PropertyNameCaseInsensitive = _jsonSerializerOptions.PropertyNameCaseInsensitive,
                     ReadCommentHandling = _jsonSerializerOptions.ReadCommentHandling,
-                    WriteIndented = _jsonSerializerOptions.WriteIndented
+                    WriteIndented = _jsonSerializerOptions.WriteIndented,
+                    TypeInfoResolver = new DefaultJsonTypeInfoResolver()
                 };
                 foreach (var jsonConvert in _jsonSerializerOptions.Converters
                              .Where(w => !ignoreConvertTypes.Contains(w.GetType())).ToList())
                 {
                     options.Converters.Add(jsonConvert);
                 }
-
                 objectResult.Formatters.Insert(0, new SystemTextJsonOutputFormatter(options));
             }
         }

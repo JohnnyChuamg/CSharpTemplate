@@ -44,7 +44,7 @@ public class MvcConfig
                         typeof(LongToStringJsonConvert),
                         typeof(NullableLongToStringJsonConvert)
                     }));
-                option.Filters.Add(new AuthorizeFilter(JwtBearerDefaults.AuthenticationScheme)); 
+                // option.Filters.Add(new AuthorizeFilter(JwtBearerDefaults.AuthenticationScheme)); 
                 option.Filters.Add(new ProducesAttribute(MediaTypeNames.Application.Json));
                 option.Filters.Add(new ProducesResponseTypeAttribute(typeof(Result),
                     ResultHelper.ConvertHttpStatusCode(ResultCode.InvalidInput)));

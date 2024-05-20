@@ -8,7 +8,7 @@ namespace WorkLog.Api.Controllers.Users;
 
 [ApiController]
 [Area("User")]
-[Route("api/v1/[area]/[Controller]")]
+[Route("api/[area]")]
 public class UsersController(ISender mediator) : ControllerBase
 {
     [HttpGet]
@@ -50,7 +50,7 @@ public class UsersController(ISender mediator) : ControllerBase
         throw new NotImplementedException();
     }
 
-    [HttpGet("/test")]
+    [HttpGet("test")]
     public async Task<IActionResult> TestAsync()
     {
         return Ok();
