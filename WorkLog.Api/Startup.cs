@@ -1,7 +1,7 @@
 using Infrastructure.Data.EntityFramework;
 using Infrastructure.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
+using WorkLog.Application.Infrastructures.Contracts;
 
 namespace WorkLog.Api;
 
@@ -11,7 +11,7 @@ public class Startup(IConfiguration configuration)
 
     public void ConfigureServices(IServiceCollection services)
     {
-        //services.Configure<ConfigSettings>(Configuration);
+        services.Configure<ConfigSettings>(Configuration);
         services.ConfigureDependencyInjections();
     }
 
@@ -48,6 +48,12 @@ public class Startup(IConfiguration configuration)
 
         app.UseRouting();
 
-        app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+        app.UseEndpoints(endpoints =>
+        {
+            //endpoints.MapDefaultControllerRoute();
+            endpoints.MapControllers();
+        });
+        
+        
     }
 }

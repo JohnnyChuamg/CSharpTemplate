@@ -9,6 +9,7 @@ namespace Infrastructure.Data.Repositories.EntityFramework.Repositories;
 public class RepositoryFactory(DbContextIngress dbContextIngress)
     : IRepositoryFactory
 {
+    #nullable disable
     private readonly List<IRepository> _repositories = [];
 
     private RelationalDbContext _masterDbContext;

@@ -1,18 +1,24 @@
 {
   "Serilog": {
     "Using": [
-      "Serilog.Sinks.RollingFile",
-      "Serilog.Sinks.Literate"
+      "Serilog.Sinks.Console"
     ],
     "MinimumLevel": "Verbose",
     "WriteTo": [
       {
-        "Name": "LiterateConsole"
+        "Name": "Console"
       },
       {
-        "Name": "RollingFile",
+        "Name": "Async",
         "Args": {
-          "pathFormat": "./logs/log-{Date}-api.log"
+          "configure": [
+            {
+              "Name": "File",
+              "Args": {
+                "pathFormat": "./logs/log-{Date}-api.log"
+              }
+            }
+          ]
         }
       }
     ],

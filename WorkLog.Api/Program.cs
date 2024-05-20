@@ -41,7 +41,7 @@ public class Program
                         value.Query
                     });
             })
-            .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); })
+            .ConfigureWebHostDefaults((webBuilder) => { webBuilder.UseStartup<Startup>(); })
             .ConfigureServices(services =>
             {
                 // services.AddHostedService<>()

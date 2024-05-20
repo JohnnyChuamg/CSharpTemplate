@@ -26,10 +26,10 @@ public class RelationalDbContext : Microsoft.EntityFrameworkCore.DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         var typeEntityMap = typeof(EntityMap<>).GetTypeInfo();
-
+        
         var typeInfos =
             from typeInfo in AppDomain.CurrentDomain.GetAssemblies().SelectMany(typeInfo => typeInfo.GetTypes())
-            where !typeInfo.IsGenericType && typeInfo.IsClass && typeInfo.BaseType.Name == typeEntityMap.Name
+            where !typeInfo.IsGenericType && typeInfo.IsClass && typeInfo.BaseType?.Name == typeEntityMap.Name
             select typeInfo;
 
         foreach (var typeInfo in typeInfos)

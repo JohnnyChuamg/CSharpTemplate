@@ -4,12 +4,11 @@ using WorkLog.Api.Controllers.Users.Models;
 using WorkLog.Application.Services.Users;
 using WorkLog.Infrastructure.Enums;
 
-
 namespace WorkLog.Api.Controllers.Users;
 
 [ApiController]
 [Area("User")]
-[Route("api/v1/[area]")]
+[Route("api/v1/[area]/[Controller]")]
 public class UsersController(ISender mediator) : ControllerBase
 {
     [HttpGet]
@@ -49,5 +48,11 @@ public class UsersController(ISender mediator) : ControllerBase
     {
         var result = await mediator.Send(new UpdateUserStatus { Id = id });
         throw new NotImplementedException();
+    }
+
+    [HttpGet("/test")]
+    public async Task<IActionResult> TestAsync()
+    {
+        return Ok();
     }
 }
