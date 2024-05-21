@@ -14,9 +14,9 @@ public class QueryUsersResponse
         {
             Id = source.Id,
             Name = source.Name,
-            Username = source.Username,
-            DepartmentId = source.DepartmentId,
-            RoleId = source.RoleId
+            Username = source.Username
+            //DepartmentId = source.DepartmentId,
+            //RoleId = source.RoleId
         };
     }
 }

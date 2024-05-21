@@ -225,7 +225,7 @@ public class Result
 	public static Task<Result> InvalidInputAsync()
 		=> Task.FromResult(InvalidInputResult);
 
-	public static Task<Result> InvalidInputAsync(string? message)
+	public static Task<Result> InvalidInputAsync(string message)
 		=> Task.FromResult(InvalidInput(message));
 
 	public static Result<T> InvalidInput<T>()

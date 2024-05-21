@@ -1,3 +1,5 @@
+using Infrastructure.Contracts.ResultContracts;
+using Infrastructure.Mvc.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using WorkLog.Api.Controllers.Users.Models;
@@ -14,45 +16,35 @@ public class UsersController(ISender mediator) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> QueryAsync(QueryUserRequest request)
     {
-        var users = new QueryUsers
-        {
-            Predicate = p => p.Status == Status.Enable
-        };
-        var result = await mediator.Send(users);
-        return Ok(result);
+        var result = await mediator.Send(request.ParseToQueryUsersQuery());
+        return result.ToActionResult();
     }
 
-    [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetAsync([FromRoute] int id)
+    [HttpGet("{id:long}")]
+    public async Task<IActionResult> GetAsync(long id)
     {
         var result = await mediator.Send(new GetUserDetail { Id = id });
-        return Ok(result);
+        return result.ToActionResult();
     }
 
     [HttpPost]
-    public async Task<IActionResult> PostAsync(CreateUserRequest userRequest)
+    public async Task<IActionResult> PostAsync(CreateUser userRequest)
     {
-        var result = await mediator.Send(new CreateUser());
-        return Ok(result);
+        var result = await mediator.Send(userRequest);
+        return result.ToActionResult();
     }
 
-    [HttpPut("{id:int}")]
-    public async Task<IActionResult> PutAsync([FromRoute] int id, UpdateUserRequest request)
+    [HttpPut("{id:long}")]
+    public async Task<IActionResult> PutAsync([FromRoute] long id, UpdateUserRequest request)
     {
         var result = await mediator.Send(new UpdateUser { Id = id });
-        return Ok(result);
+        return result.ToActionResult();
     }
 
-    [HttpPut("{id:int}/status")]
-    public async Task<IActionResult> SetStatusAsync([FromRoute] int id, Status status)
+    [HttpPut("{id:long}/status")]
+    public async Task<IActionResult> SetStatusAsync([FromRoute] long id, Status status)
     {
         var result = await mediator.Send(new UpdateUserStatus { Id = id });
-        throw new NotImplementedException();
-    }
-
-    [HttpGet("test")]
-    public async Task<IActionResult> TestAsync()
-    {
-        return Ok();
+        return result.ToActionResult();
     }
 }
