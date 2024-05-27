@@ -72,7 +72,7 @@ public class MvcConfig
             .AddValidatorsFromAssembly(typeof(IService).GetTypeInfo().Assembly)
             ;
 
-        services.AddApiVersioning(option =>
+        ((IServiceCollection)services).AddApiVersioning(option =>
         {
             option.ReportApiVersions = false;
             option.AssumeDefaultVersionWhenUnspecified = true;

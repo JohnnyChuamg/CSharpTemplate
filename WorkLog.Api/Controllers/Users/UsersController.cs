@@ -1,4 +1,3 @@
-using Infrastructure.Contracts.ResultContracts;
 using Infrastructure.Mvc.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

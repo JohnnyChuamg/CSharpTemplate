@@ -44,11 +44,11 @@ public static class ApplicationBuilderExtension
             }
             else
             {
-                var dictionary = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+                var dictionary = new Dictionary<string, string?>(StringComparer.InvariantCultureIgnoreCase);
                 foreach (var header in context.Request.Headers)
                 {
                     dictionary[header.Key] = header.Value.ToString();
-                    dictionary["Client-IP"] = context.Connection.RemoteIpAddress.ToString();
+                    dictionary["Client-IP"] = context.Connection.RemoteIpAddress?.ToString();
                     var array = JsonSerializer.SerializeToUtf8Bytes(dictionary, new JsonSerializerOptions()
                     {
                         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
@@ -59,7 +59,7 @@ public static class ApplicationBuilderExtension
                     context.Response.ContentLength = array.Length;
                     if (context.Request.Query.ContainsKey("download"))
                     {
-                        context.Response.Headers.Add("Content-Disposition",
+                        context.Response.Headers.Append("Content-Disposition",
                             new StringValues("attachment; filename=MyIP-" + DateTimeOffset.UtcNow.Ticks + ".json"));
                     }
 

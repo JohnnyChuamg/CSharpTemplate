@@ -9,23 +9,23 @@ using System.Text;
 using Infrastructure.Mvc.Models;
 
 namespace Infrastructure.Mvc.Extensions;
-
+#nullable disable
 public static class HttpRequestExtension
 {
-    private static readonly FormOptions DefaultFormOptions = new ();
+    private static readonly FormOptions DefaultFormOptions = new();
 
     public static async Task<(FormValueProvider FormData, List<FileContent> Files)> GetFormDataAsync(
         this HttpRequest request, string tempPath = "")
     {
-        if (!request.ContentType.IsMultipartContentType())
+        if (request?.ContentType == null || !request.ContentType.IsMultipartContentType())
         {
-            throw new Exception($"Expected a multipart request, but got {request.ContentType}");
+            throw new Exception($"Expected a multipart request, but got {request?.ContentType ?? string.Empty}");
         }
 
         var formAccumulator = default(KeyValueAccumulator);
 
         var boundary = MediaTypeHeaderValue.Parse(request.ContentType)
-            .GetBoundary(DefaultFormOptions.MultipartBoundaryLengthLimit);
+            .GetBoundary(DefaultFormOptions.MultipartBoundaryLengthLimit) ?? string.Empty;
 
         var reader = new MultipartReader(boundary, request.Body);
 
@@ -41,7 +41,7 @@ public static class HttpRequestExtension
         {
             if (ContentDispositionHeaderValue.TryParse(multipartSection.ContentDisposition, out var parsedValue))
             {
-                var key = HeaderUtilities.RemoveQuotes(parsedValue.Name).Value;
+                var key = HeaderUtilities.RemoveQuotes(parsedValue.Name).Value ?? string.Empty;
                 if (parsedValue.HasFileContentDisposition())
                 {
                     if (string.IsNullOrWhiteSpace(tempPath))
@@ -77,7 +77,8 @@ public static class HttpRequestExtension
                     {
                         text = string.Empty;
                     }
-                    formAccumulator.Append(key,text);
+
+                    formAccumulator.Append(key, text);
                     if (formAccumulator.ValueCount > DefaultFormOptions.ValueCountLimit)
                     {
                         throw new InvalidDataException(
@@ -85,6 +86,7 @@ public static class HttpRequestExtension
                     }
                 }
             }
+
             multipartSection = await reader.ReadNextSectionAsync();
         }
 

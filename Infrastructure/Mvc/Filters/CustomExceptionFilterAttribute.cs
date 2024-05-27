@@ -1,16 +1,17 @@
 using FluentValidation;
-using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
 
 using Infrastructure.Contracts.ResultContracts;
+
 namespace Infrastructure.Mvc.Filters;
 
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
 public class CustomExceptionFilterAttribute(
     ILogger<CustomExceptionFilterAttribute> logger,
-    IHostingEnvironment environment) : ExceptionFilterAttribute
+    IHostEnvironment environment) : ExceptionFilterAttribute
 {
     public override void OnException(ExceptionContext context)
     {
